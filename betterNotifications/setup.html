@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Setup</title>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" href="style.css">
+        <script src="https://code.jquery.com/jquery-3.6.3.min.js" integrity="sha256-pvPw+upLPUjgMXY0G+8O0xUf+/Im1MZjXxxgOcBQBXU=" crossorigin="anonymous"></script>
+    </head>
+    <body>
+        <div class="container">
+            <h1 class="title">Setup</h1>
+            <br>
+            <p id="status">Setting up Better Notifications...</p>
+            <br>
+        </div>
+        
+        <script>
+            async function setup() {
+                // Check if service workers are supported
+                if (!('serviceWorker' in navigator)) {
+                    $("#status").text("Service workers are not supported on your browser. You cannot use this plugin.");
+                    return;
+                }
+
+                // Register service worker so we can use showNotification
+                try {
+                    await navigator.serviceWorker.register("sw.js");
+                } catch (err) {
+                    $("#status").text("Couldn't register a service wroker. Does your browser support service workers?");
+                    return;
+                }
+
+                // Ask for notification permission
+                const permissionGranted = (await Notification.requestPermission()) == "granted";
+                if (!permissionGranted) {
+                    $("#status").text("You didn't grant permission to send notifications. You cannot use this plugin without granting permission to use notifications.");
+                    return;
+                }
+
+                // Send notification and set up confirmation promise
+                const registration = await navigator.serviceWorker.ready;
+
+                const confirmed = new Promise((resolve) => {
+                    navigator.serviceWorker.addEventListener("message", (event) => {
+                        if (event.data == "confirmed")
+                            resolve();
+                    });
+                });
+
+                registration.showNotification("Setup", {
+                    body: "Click this notification to confirm that you can see it.",
+                    tag: "confirm",
+                    silent: false
+                });
+
+                // Have the user confirm that they can see the notification
+                $("#status").text("Check your notifications. If you can see a notification titled \"Setup\", click it. If you can't see it, make sure you have notifications enabled for this website and the current browser.");
+
+                await confirmed;
+                $("#status").text("Better Notifications is now set up. You can close this tab.");
+            }
+
+            setup();
+        </script>
+    </body>
+</html>
